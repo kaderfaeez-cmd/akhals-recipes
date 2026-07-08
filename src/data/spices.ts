@@ -37,6 +37,8 @@ export const SPICES: Spice[] = [
   { slug: "fine-ginger-garlic-masala", name: "Fine Ginger Garlic Masala", tagline: "The flavour foundation", group: "Everyday", heatLevel: 1, accent: "#9A7B3B" },
   { slug: "mutton-masala", name: "Mutton Masala", tagline: "For slow, rich lamb", group: "Curry & Masala", heatLevel: 3, accent: "#8A2A14" },
   { slug: "pickled-fish-masala", name: "Pickled Fish Masala", tagline: "Cape Malay Easter tradition", group: "Seafood", heatLevel: 2, accent: "#C99A2B" },
+  { slug: "braising-spice", name: "Braising Spice", tagline: "The pot-starter blend", group: "Everyday", heatLevel: 1, accent: "#7A4B28" },
+  { slug: "5-spice-whole", name: "5 Spice Whole", tagline: "Whole spices, ready to bloom", group: "Everyday", heatLevel: 0, accent: "#6B4A2E" },
 ];
 
 export const SPICE_GROUPS: SpiceGroup[] = [

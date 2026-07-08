@@ -7,7 +7,36 @@ import { RECIPES } from "../src/data/recipes";
 
 const prisma = new PrismaClient();
 
+// Earlier placeholder recipes, replaced by the family-notebook originals.
+// Removed here so production doesn't keep serving invented content.
+const RETIRED_SLUGS = [
+  "durban-chicken-curry",
+  "lamb-biryani",
+  "chicken-tikka-skewers",
+  "cape-malay-pickled-fish",
+  "braai-tbone-steak",
+  "coconut-prawn-curry",
+  "butter-chicken",
+  "lamb-potjiekos",
+  "tandoori-roast-chicken",
+  "pepper-steak-potjie-pie",
+  "kashmiri-lamb-curry",
+  "crispy-fried-fish",
+];
+
 async function main() {
+  // Retire placeholder recipes (and their scan events) if present
+  const retired = await prisma.recipe.findMany({
+    where: { slug: { in: RETIRED_SLUGS } },
+    select: { id: true },
+  });
+  if (retired.length > 0) {
+    const ids = retired.map((r) => r.id);
+    await prisma.scanEvent.deleteMany({ where: { recipeId: { in: ids } } });
+    await prisma.recipe.deleteMany({ where: { id: { in: ids } } });
+    console.log(`Retired ${ids.length} placeholder recipes`);
+  }
+
   // Spices
   for (const s of SPICES) {
     await prisma.spice.upsert({
