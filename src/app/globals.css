@@ -1,0 +1,122 @@
+@import "tailwindcss";
+
+/* ————————————————————————————————————————————————
+   Akhals Spice & More — design tokens
+   Warm cream editorial base, charcoal ink,
+   deep spice red / cinnamon / saffron accents.
+   ———————————————————————————————————————————————— */
+:root {
+  --cream: #f7f0e4;
+  --cream-soft: #fbf6ec;
+  --cream-deep: #efe5d3;
+  --ink: #211712;
+  --ink-soft: #4a3a30;
+  --ink-faint: #7d6a5c;
+  --spice: #9e2612;
+  --spice-deep: #7c1c0d;
+  --cinnamon: #8a4b24;
+  --saffron: #d3922a;
+  --saffron-bright: #e8ab3c;
+  --charcoal: #171310;
+  --charcoal-soft: #241d18;
+  --line: rgba(33, 23, 18, 0.14);
+  --line-strong: rgba(33, 23, 18, 0.32);
+}
+
+@theme inline {
+  --color-cream: var(--cream);
+  --color-cream-soft: var(--cream-soft);
+  --color-cream-deep: var(--cream-deep);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-spice: var(--spice);
+  --color-spice-deep: var(--spice-deep);
+  --color-cinnamon: var(--cinnamon);
+  --color-saffron: var(--saffron);
+  --color-saffron-bright: var(--saffron-bright);
+  --color-charcoal: var(--charcoal);
+  --color-charcoal-soft: var(--charcoal-soft);
+  --font-serif: var(--font-fraunces);
+  --font-sans: var(--font-inter);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--saffron);
+  color: var(--charcoal);
+}
+
+/* Editorial helpers */
+.font-display {
+  font-family: var(--font-fraunces), Georgia, serif;
+}
+
+.eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+}
+
+.hairline {
+  border-color: var(--line);
+}
+
+/* Grain — subtle paper texture over cream sections */
+.grain {
+  position: relative;
+}
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.13 0 0 0 0 0.09 0 0 0 0 0.07 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Focus visibility — accessible, on-brand */
+:focus-visible {
+  outline: 2px solid var(--saffron);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* Reduced motion: kill smooth scroll + long animations */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Print: recipe pages print clean */
+@media print {
+  header,
+  footer,
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+}

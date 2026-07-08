@@ -1,0 +1,98 @@
+// Akhals Spice & More — recipe platform data model
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+}
+
+enum RecipeStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  passwordHash String
+  role         Role     @default(ADMIN)
+  createdAt    DateTime @default(now())
+  recipes      Recipe[]
+}
+
+model Spice {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  tagline   String?
+  heatLevel Int      @default(0) // 0 mild .. 5 fiery
+  accent    String   @default("#B8341F")
+  recipes   Recipe[]
+  createdAt DateTime @default(now())
+}
+
+model Recipe {
+  id             String       @id @default(cuid())
+  slug           String       @unique
+  title          String
+  description    String
+  status         RecipeStatus @default(PUBLISHED)
+  difficulty     Difficulty   @default(MEDIUM)
+  prepMinutes    Int          @default(15)
+  cookMinutes    Int          @default(30)
+  servings       Int          @default(4)
+  heroImage      String
+  gallery        String[]     @default([])
+  ingredients    Json         // { group, items:[{ qty, item }] }[]
+  instructions   Json         // { step, title, body }[]
+  tips           String[]     @default([])
+  tags           String[]     @default([])
+  spiceProducts  String[]     @default([]) // extra product names used
+  seoTitle       String?
+  seoDescription String?
+  views          Int          @default(0)
+  featured       Boolean      @default(false)
+  publishedAt    DateTime     @default(now())
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  spice   Spice  @relation(fields: [spiceId], references: [id])
+  spiceId String
+
+  author   User?   @relation(fields: [authorId], references: [id])
+  authorId String?
+
+  scans ScanEvent[]
+
+  @@index([spiceId])
+  @@index([status])
+}
+
+model ScanEvent {
+  id        String   @id @default(cuid())
+  recipe    Recipe?  @relation(fields: [recipeId], references: [id])
+  recipeId  String?
+  spiceSlug String?
+  device    String   @default("unknown") // mobile | tablet | desktop
+  country   String?
+  city      String?
+  referer   String?
+  createdAt DateTime @default(now())
+
+  @@index([recipeId])
+  @@index([createdAt])
+}
