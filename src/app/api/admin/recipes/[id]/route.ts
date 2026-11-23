@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, hasDatabase } from "@/lib/prisma";
-import { recipeInputSchema } from "@/lib/validation";
+import { recipeUpdateSchema } from "@/lib/validation";
 import { spiceBySlug } from "@/data/spices";
 
 const noDb = () =>
@@ -20,7 +20,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!hasDatabase()) return noDb();
   const { id } = await params;
-  const parsed = recipeInputSchema.partial().safeParse(await req.json().catch(() => null));
+  const parsed = recipeUpdateSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json(
       { ok: false, error: "Validation failed", issues: parsed.error.flatten() },
