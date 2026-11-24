@@ -52,8 +52,10 @@ errors) → `npx next build` → `git diff` review. No CI.
   products (fixed 2026-11-23).
 
 ## Security-sensitive areas
-- `/admin` and `/api/admin/*` are guarded by `src/middleware.ts` only; route handlers don't re-check the
-  session (known gap). Every user is effectively admin (`Role` unused).
+- `/admin` and `/api/admin/*` are guarded by `src/middleware.ts`, and every `/api/admin/*` handler also
+  calls `requireAdminSession()` (`src/lib/admin-session.ts`) first and returns 401 without a session.
+  A new admin handler must do the same; `src/app/api/admin/admin-auth.test.ts` lists them all. Every
+  user is effectively admin (`Role` unused).
 - Public write: `POST /api/track` (page views) — no rate limit.
 - Untrusted input: admin recipe JSON (zod), uploads (sharp), login `callbackUrl` (unchecked — known gap).
 

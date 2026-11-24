@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdminSession } from "@/lib/admin-session";
 import path from "node:path";
 import { mkdir, writeFile } from "node:fs/promises";
 import sharp from "sharp";
@@ -14,6 +15,8 @@ const WIDTHS = [480, 960, 1600];
  * ephemeral — swap the write for Vercel Blob / S3 when hosting there.
  */
 export async function POST(req: NextRequest) {
+  const denied = await requireAdminSession();
+  if (denied) return denied;
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");
   if (!file || !(file instanceof File)) {

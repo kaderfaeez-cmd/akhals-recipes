@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdminSession } from "@/lib/admin-session";
 import { prisma, hasDatabase } from "@/lib/prisma";
 import { recipeUpdateSchema } from "@/lib/validation";
 import { spiceBySlug } from "@/data/spices";
@@ -10,6 +11,8 @@ const noDb = () =>
   );
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const denied = await requireAdminSession();
+  if (denied) return denied;
   if (!hasDatabase()) return noDb();
   const { id } = await params;
   const recipe = await prisma.recipe.findUnique({ where: { id }, include: { spice: true } });
@@ -18,6 +21,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const denied = await requireAdminSession();
+  if (denied) return denied;
   if (!hasDatabase()) return noDb();
   const { id } = await params;
   const parsed = recipeUpdateSchema.safeParse(await req.json().catch(() => null));
@@ -58,6 +63,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const denied = await requireAdminSession();
+  if (denied) return denied;
   if (!hasDatabase()) return noDb();
   const { id } = await params;
   try {

@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
+import { requireAdminSession } from "@/lib/admin-session";
 import { prisma, hasDatabase } from "@/lib/prisma";
 
 export async function GET() {
+  const denied = await requireAdminSession();
+  if (denied) return denied;
   if (!hasDatabase()) {
     return NextResponse.json({
       ok: true,

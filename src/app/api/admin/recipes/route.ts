@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdminSession } from "@/lib/admin-session";
 import { prisma, hasDatabase } from "@/lib/prisma";
 import { recipeInputSchema } from "@/lib/validation";
 import { spiceBySlug } from "@/data/spices";
@@ -10,6 +11,8 @@ const noDb = () =>
   );
 
 export async function GET() {
+  const denied = await requireAdminSession();
+  if (denied) return denied;
   if (!hasDatabase()) return noDb();
   const recipes = await prisma.recipe.findMany({
     include: { spice: { select: { name: true, slug: true } } },
@@ -19,6 +22,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const denied = await requireAdminSession();
+  if (denied) return denied;
   if (!hasDatabase()) return noDb();
   const parsed = recipeInputSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
