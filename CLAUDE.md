@@ -62,7 +62,7 @@ errors) → `npx next build` → `git diff` review. No CI.
   A new admin handler must do the same; `src/app/api/admin/admin-auth.test.ts` lists them all. Every
   user is effectively admin (`Role` unused).
 - Public write: `POST /api/track` (page views) — no rate limit.
-- Untrusted input: admin recipe JSON (zod), uploads (sharp), login `callbackUrl` (unchecked — known gap).
+- Untrusted input: admin recipe JSON (zod), uploads (sharp), login `callbackUrl` (only `/admin…` same-origin paths, `src/lib/safe-callback.ts`).
 
 ## Deployment
 - Vercel serverless; ephemeral filesystem.

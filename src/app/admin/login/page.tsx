@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { safeAdminCallback } from "@/lib/safe-callback";
 
 function LoginForm() {
   const router = useRouter();
@@ -22,7 +23,7 @@ function LoginForm() {
       setError("Those details don't match. Try again.");
       return;
     }
-    router.push(params.get("callbackUrl") ?? "/admin");
+    router.push(safeAdminCallback(params.get("callbackUrl")));
     router.refresh();
   };
 
