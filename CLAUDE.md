@@ -22,6 +22,8 @@ Live URL / hosting: Vercel production (`akhalsrecipes.com` per the owner; README
 - `src/app/admin/*` — client-side admin UI; `src/app/api/admin/*` — admin JSON API
 - `src/lib/recipes.ts` — all public reads; falls back to seed recipes in `src/data/` with no DB, on query
   failure, or when nothing is published
+- `src/lib/revalidate-public.ts` — `revalidatePublicRecipePages()`; every admin recipe write calls it so the
+  prerendered `/` and `/recipes/<slug>` pages refresh (guard: `src/app/api/admin/revalidation.test.ts`)
 - `src/lib/validation.ts` — zod schemas for recipe create (`recipeInputSchema`, applies defaults) and update
   (`recipeUpdateSchema`, default-free partial — see Testing)
 - `prisma/seed.ts` — runs on EVERY Vercel build against production (upserts seed recipes, resets the admin

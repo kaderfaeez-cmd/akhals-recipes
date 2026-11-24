@@ -66,6 +66,10 @@ Point each packet's QR at
   the photographic fallback hero.
 - `prefers-reduced-motion` disables the scroll scenes entirely.
 - Recipe pages are statically generated with full Recipe schema for Google.
+  Admin creates, edits, Publish/Draft changes and deletes call
+  `revalidatePublicRecipePages()` (`src/lib/revalidate-public.ts`), so `/`,
+  `/recipes`, every `/recipes/<slug>` page and the sitemap refresh on the next
+  visit instead of waiting for a redeploy.
 
 ## Production upload note
 

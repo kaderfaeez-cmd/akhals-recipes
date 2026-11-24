@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminSession } from "@/lib/admin-session";
 import { prisma, hasDatabase } from "@/lib/prisma";
+import { revalidatePublicRecipePages } from "@/lib/revalidate-public";
 import { recipeUpdateSchema } from "@/lib/validation";
 import { spiceBySlug } from "@/data/spices";
 
@@ -55,6 +56,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         ...(spiceId ? { spiceId } : {}),
       },
     });
+    revalidatePublicRecipePages();
     return NextResponse.json({ ok: true, recipe });
   } catch (err) {
     console.error("[admin/recipes PUT]", err);
@@ -70,6 +72,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   try {
     await prisma.scanEvent.deleteMany({ where: { recipeId: id } });
     await prisma.recipe.delete({ where: { id } });
+    revalidatePublicRecipePages();
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[admin/recipes DELETE]", err);

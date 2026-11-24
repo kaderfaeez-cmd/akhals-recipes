@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminSession } from "@/lib/admin-session";
 import { prisma, hasDatabase } from "@/lib/prisma";
+import { revalidatePublicRecipePages } from "@/lib/revalidate-public";
 import { recipeInputSchema } from "@/lib/validation";
 import { spiceBySlug } from "@/data/spices";
 
@@ -73,6 +74,7 @@ export async function POST(req: NextRequest) {
         spiceId: spice.id,
       },
     });
+    revalidatePublicRecipePages();
     return NextResponse.json({ ok: true, recipe }, { status: 201 });
   } catch (err: unknown) {
     const message =
