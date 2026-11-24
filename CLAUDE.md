@@ -9,7 +9,7 @@ Live URL / hosting: Vercel production (`akhalsrecipes.com` per the owner; README
 `akhalsrecipes.co.za` — `NEXT_PUBLIC_SITE_URL` decides canonical links). Push to `main` deploys.
 
 ## Stack
-- Next.js 16.2.10 App Router, React 19.2, TypeScript strict, Tailwind 4, R3F/Three.js + GSAP hero
+- Next.js 16.4.5 App Router, React 19.2, TypeScript strict, Tailwind 4, R3F/Three.js + GSAP hero
 - npm (lockfile committed). Install: `npm install`
 - Database / ORM: Neon Postgres via Prisma 6.19 (`prisma/schema.prisma`); no migrations — `prisma db push`
 - File storage: admin uploads are stored as WebP bytes in Postgres (`MediaAsset`, written by
