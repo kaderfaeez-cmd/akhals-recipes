@@ -4,21 +4,17 @@ import { CinematicHero } from "@/components/hero/CinematicHero";
 import { FeaturedSteam } from "@/components/home/FeaturedSteam";
 import { Collections } from "@/components/home/Collections";
 import { Story, FinalCta } from "@/components/home/StoryAndCta";
-import { getFeaturedRecipes } from "@/lib/recipes";
+import { getAllRecipes, getFeaturedRecipes } from "@/lib/recipes";
+import { heroDishProps } from "@/lib/hero-dish";
 
 export default async function HomePage() {
-  const featured = await getFeaturedRecipes();
-  const heroDish = featured[0];
+  const [featured, all] = await Promise.all([getFeaturedRecipes(), getAllRecipes()]);
 
   return (
     <>
       <SiteHeader dark />
       <main id="main">
-        <CinematicHero
-          dishImage={heroDish?.heroImage ?? "/img/recipes/durban-chicken-curry.png"}
-          dishTitle={heroDish?.title ?? "Durban Chicken Curry"}
-          dishHref={`/recipes/${heroDish?.slug ?? "durban-chicken-curry"}`}
-        />
+        <CinematicHero {...heroDishProps(featured, all)} />
         <FeaturedSteam recipes={featured} />
         <Collections />
         <Story />
