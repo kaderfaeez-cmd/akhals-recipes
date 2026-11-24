@@ -41,7 +41,7 @@ Live URL / hosting: Vercel production (`akhalsrecipes.com` per the owner; README
 | Format check | gap: no formatter configured |
 | Lint | `npx eslint src` (9 pre-existing errors in hero/header/admin components as of 2026-11-23) |
 | Type check | `npx tsc --noEmit` |
-| Unit tests | `npm test` (`node --test`, files `src/**/*.test.ts`) |
+| Unit tests | `npm test` (Vitest, files `src/**/*.test.ts` and `prisma/**/*.test.ts`; no database needed) |
 | E2E tests | gap: none |
 | Production build | `npx next build` (Vercel runs `npm run vercel-build`) |
 | DB schema / seed | `npx prisma db push` / `npx tsx prisma/seed.ts` — both hit whatever `DATABASE_URL` points at |
@@ -51,11 +51,17 @@ Live URL / hosting: Vercel production (`akhalsrecipes.com` per the owner; README
 errors) → `npx next build` → `git diff` review. No CI.
 
 ## Testing
-- `node --test` with Node's type stripping; tests import siblings with the `.ts` extension
-  (`allowImportingTsExtensions` is on; `noEmit` is on).
+- Vitest (`vitest.config.ts`): resolves the `@/` alias so route handlers can be imported and called
+  directly; Prisma, next-auth and next/cache are replaced with `vi.mock`. The config blanks `DATABASE_URL`
+  so no test can reach a real database. Never add a test that does.
 - Must stay covered: `src/lib/validation.test.ts` — updates must never fill in defaults. zod 4's
   `.partial()` still applies `.default()`, which made the Publish/Draft toggle wipe tips, tags, gallery and
   products (fixed 2026-11-23).
+- Also must stay covered (2026-11-24 fixes): `src/app/api/admin/admin-auth.test.ts` (every admin handler
+  401s without a session — add new handlers to its list), `src/app/api/admin/revalidation.test.ts`,
+  `prisma/seed-core.test.ts` (seed never resurrects recipes or touches the admin), `src/lib/safe-callback.test.ts`,
+  `src/lib/json-ld.test.ts`, `src/lib/auth.test.ts` + `src/app/api/track/route.test.ts` (rate limits),
+  `src/app/api/admin/upload/route.test.ts` + `src/app/media/[name]/route.test.ts` (uploads in Postgres).
 
 ## Security-sensitive areas
 - `/admin` and `/api/admin/*` are guarded by `src/middleware.ts`, and every `/api/admin/*` handler also
