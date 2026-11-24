@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test } from "vitest";
 import { recipeInputSchema, recipeUpdateSchema } from "./validation.ts";
 
 // The admin list's Publish/Draft button sends only { status }. Whatever the update schema returns
