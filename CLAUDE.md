@@ -61,7 +61,10 @@ errors) → `npx next build` → `git diff` review. No CI.
   calls `requireAdminSession()` (`src/lib/admin-session.ts`) first and returns 401 without a session.
   A new admin handler must do the same; `src/app/api/admin/admin-auth.test.ts` lists them all. Every
   user is effectively admin (`Role` unused).
-- Public write: `POST /api/track` (page views) — no rate limit.
+- Rate limits (`src/lib/rate-limit.ts`, Postgres table `RateLimitBucket`, keys are HMACs of the client IP):
+  login 10 attempts / 15 min per IP, checked in `authorize()` and failing closed; public `POST /api/track`
+  60 / 10 min per IP (429 + Retry-After), failing open. Without `DATABASE_URL` it uses a per-process Map
+  (dev only). Client IP comes from Vercel-set `x-forwarded-for`/`x-real-ip`.
 - Untrusted input: admin recipe JSON (zod), uploads (sharp), login `callbackUrl` (only `/admin…` same-origin paths, `src/lib/safe-callback.ts`).
 
 ## Deployment

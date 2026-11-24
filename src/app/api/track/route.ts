@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { hasDatabase, prisma } from "@/lib/prisma";
+import { TRACK_RATE_LIMIT, checkRateLimit, clientIp, rateLimitKey } from "@/lib/rate-limit";
 
 const trackSchema = z.object({
   recipeSlug: z.string().max(120).optional(),
@@ -16,6 +17,21 @@ function deviceFromUa(ua: string | null): string {
 }
 
 export async function POST(req: NextRequest) {
+  // Public endpoint: cap writes per visitor. Analytics fail open — a limiter outage must not
+  // break recipe pages, and the write below would fail on a DB outage anyway.
+  try {
+    const key = rateLimitKey("track", clientIp((name) => req.headers.get(name)));
+    const limit = await checkRateLimit(key, TRACK_RATE_LIMIT);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { ok: false, error: "Too many requests" },
+        { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } }
+      );
+    }
+  } catch (err) {
+    console.error("[track] rate limit check failed, allowing:", err);
+  }
+
   let parsed;
   try {
     parsed = trackSchema.safeParse(await req.json());

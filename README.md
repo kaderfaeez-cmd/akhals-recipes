@@ -64,6 +64,13 @@ admin again.
 | `/admin/media` | Upload → WebP + 480/960/1600 responsive sizes |
 | `/admin/analytics` | Scans, top recipes, devices, locations |
 
+## Rate limits
+
+Admin login is limited to 10 attempts per 15 minutes per IP, and the public
+view beacon `POST /api/track` to 60 per 10 minutes per IP. Counters live in the
+`RateLimitBucket` table (created by `prisma db push` in the Vercel build), so
+every serverless instance shares them.
+
 ## QR codes
 
 Point each packet's QR at

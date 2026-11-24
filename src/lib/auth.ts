@@ -2,6 +2,21 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { hasDatabase, prisma } from "@/lib/prisma";
+import { LOGIN_RATE_LIMIT, checkRateLimit, clientIp, rateLimitKey } from "@/lib/rate-limit";
+import { TOO_MANY_ATTEMPTS } from "@/lib/auth-errors";
+
+/**
+ * Per-IP login limit (LOGIN_RATE_LIMIT), counted before the password is checked. Fails closed: if
+ * the limiter cannot be reached, the attempt is refused rather than allowed unthrottled.
+ */
+async function loginAllowed(headers: Record<string, unknown> | undefined): Promise<boolean> {
+  const header = (name: string) => {
+    const value = headers?.[name];
+    return typeof value === "string" ? value : undefined;
+  };
+  const result = await checkRateLimit(rateLimitKey("login", clientIp(header)), LOGIN_RATE_LIMIT);
+  return result.allowed;
+}
 
 // Credentials auth against the User table. When no database is configured,
 // a bootstrap admin from env vars keeps the panel reachable in development.
@@ -15,8 +30,18 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials.password) return null;
+
+        let allowed: boolean;
+        try {
+          allowed = await loginAllowed(req?.headers);
+        } catch (err) {
+          console.error("[auth] rate limit check failed, refusing login:", err);
+          return null;
+        }
+        // Thrown errors reach the login page as `error`; it shows a "try again later" message.
+        if (!allowed) throw new Error(TOO_MANY_ATTEMPTS);
 
         if (hasDatabase()) {
           try {

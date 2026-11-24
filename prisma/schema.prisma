@@ -96,3 +96,13 @@ model ScanEvent {
   @@index([recipeId])
   @@index([createdAt])
 }
+
+// Fixed-window rate-limit counters (src/lib/rate-limit.ts), shared by every serverless instance.
+// key = "<purpose>:<HMAC of client IP>" — raw IPs are never stored. Expired rows are pruned on use.
+model RateLimitBucket {
+  key     String   @id
+  count   Int
+  resetAt DateTime
+
+  @@index([resetAt])
+}

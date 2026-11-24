@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { safeAdminCallback } from "@/lib/safe-callback";
+import { TOO_MANY_ATTEMPTS } from "@/lib/auth-errors";
 
 function LoginForm() {
   const router = useRouter();
@@ -20,7 +21,11 @@ function LoginForm() {
     const res = await signIn("credentials", { email, password, redirect: false });
     setBusy(false);
     if (res?.error) {
-      setError("Those details don't match. Try again.");
+      setError(
+        res.error === TOO_MANY_ATTEMPTS
+          ? "Too many sign-in attempts. Wait 15 minutes and try again."
+          : "Those details don't match. Try again."
+      );
       return;
     }
     router.push(safeAdminCallback(params.get("callbackUrl")));
