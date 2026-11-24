@@ -1,54 +1,37 @@
-/* Seeds the database with the spice catalogue, seed recipes and an admin user.
-   Run: npx prisma db seed  (configured in package.json)                        */
+/* Seeds the database with the spice catalogue, starter recipes and the first admin user.
+   Runs on every Vercel build (package.json `vercel-build`) and via `npx prisma db seed`.
+   The rules that make it safe to repeat against production live in prisma/seed-core.ts.   */
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { SPICES } from "../src/data/spices";
 import { RECIPES } from "../src/data/recipes";
+import { runSeed, type SeedStore } from "./seed-core";
 
 const prisma = new PrismaClient();
 
-// Earlier placeholder recipes, replaced by the family-notebook originals.
-// Removed here so production doesn't keep serving invented content.
-const RETIRED_SLUGS = [
-  "durban-chicken-curry",
-  "lamb-biryani",
-  "chicken-tikka-skewers",
-  "cape-malay-pickled-fish",
-  "braai-tbone-steak",
-  "coconut-prawn-curry",
-  "butter-chicken",
-  "lamb-potjiekos",
-  "tandoori-roast-chicken",
-  "pepper-steak-potjie-pie",
-  "kashmiri-lamb-curry",
-  "crispy-fried-fish",
-];
-
-async function main() {
-  // Retire placeholder recipes (and their scan events) if present
-  const retired = await prisma.recipe.findMany({
-    where: { slug: { in: RETIRED_SLUGS } },
-    select: { id: true },
-  });
-  if (retired.length > 0) {
-    const ids = retired.map((r) => r.id);
-    await prisma.scanEvent.deleteMany({ where: { recipeId: { in: ids } } });
-    await prisma.recipe.deleteMany({ where: { id: { in: ids } } });
-    console.log(`Retired ${ids.length} placeholder recipes`);
-  }
-
-  // Spices
-  for (const s of SPICES) {
-    await prisma.spice.upsert({
-      where: { slug: s.slug },
-      update: { name: s.name, tagline: s.tagline, heatLevel: s.heatLevel, accent: s.accent },
-      create: { slug: s.slug, name: s.name, tagline: s.tagline, heatLevel: s.heatLevel, accent: s.accent },
+const store: SeedStore = {
+  async retireRecipes(slugs, createdBefore) {
+    const rows = await prisma.recipe.findMany({
+      where: { slug: { in: slugs }, createdAt: { lt: createdBefore } },
+      select: { id: true },
     });
-  }
-  console.log(`Seeded ${SPICES.length} spices`);
+    if (rows.length === 0) return 0;
+    const ids = rows.map((r) => r.id);
+    await prisma.$transaction([
+      prisma.scanEvent.deleteMany({ where: { recipeId: { in: ids } } }),
+      prisma.recipe.deleteMany({ where: { id: { in: ids } } }),
+    ]);
+    return ids.length;
+  },
 
-  // Recipes
-  for (const r of RECIPES) {
+  async upsertSpice(s) {
+    const data = { name: s.name, tagline: s.tagline, heatLevel: s.heatLevel, accent: s.accent };
+    await prisma.spice.upsert({ where: { slug: s.slug }, update: data, create: { slug: s.slug, ...data } });
+  },
+
+  countRecipes: () => prisma.recipe.count(),
+
+  async createRecipeIfMissing(r) {
     const spice = await prisma.spice.findUniqueOrThrow({ where: { slug: r.spiceSlug } });
     await prisma.recipe.upsert({
       where: { slug: r.slug },
@@ -74,26 +57,28 @@ async function main() {
         spiceId: spice.id,
       },
     });
-  }
-  console.log(`Seeded ${RECIPES.length} recipes`);
+  },
 
-  // Admin user
-  const email = process.env.ADMIN_EMAIL ?? "admin@akhalsrecipes.co.za";
-  const password = process.env.ADMIN_PASSWORD;
-  if (!password) {
-    console.warn("ADMIN_PASSWORD not set — skipping admin user creation.");
-    return;
-  }
-  const passwordHash = await bcrypt.hash(password, 12);
-  await prisma.user.upsert({
-    where: { email },
-    update: { passwordHash },
-    create: { email, name: "Akhals Admin", passwordHash, role: "ADMIN" },
-  });
-  console.log(`Admin user ready: ${email}`);
-}
+  countAdmins: () => prisma.user.count({ where: { role: "ADMIN" } }),
 
-main()
+  async findUserRole(email) {
+    const user = await prisma.user.findUnique({ where: { email }, select: { role: true } });
+    return user?.role ?? null;
+  },
+
+  async createAdmin({ email, name, passwordHash }) {
+    await prisma.user.create({ data: { email, name, passwordHash, role: "ADMIN" } });
+  },
+};
+
+runSeed(store, {
+  spices: SPICES,
+  recipes: RECIPES,
+  adminEmail: process.env.ADMIN_EMAIL,
+  adminPassword: process.env.ADMIN_PASSWORD,
+  hashPassword: (password) => bcrypt.hash(password, 12),
+  log: { info: console.log, warn: console.warn },
+})
   .catch((e) => {
     console.error(e);
     process.exit(1);

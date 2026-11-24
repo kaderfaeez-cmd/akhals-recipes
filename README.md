@@ -41,6 +41,17 @@ npx prisma db push     # create schema
 npx prisma db seed     # spices + recipes + admin user
 ```
 
+The Vercel build runs the same seed on every deploy, so it is written to be
+safe to repeat (`prisma/seed-core.ts`): it refreshes the spice catalogue from
+code, inserts the starter recipes only when the recipe table is empty, and
+creates the admin from `ADMIN_EMAIL` / `ADMIN_PASSWORD` only when no admin user
+exists. It never updates an existing user.
+
+**Changing the admin password:** editing `ADMIN_PASSWORD` in Vercel does not
+change an existing password. Delete the admin row from the `User` table (Neon
+console), set the new `ADMIN_PASSWORD`, and redeploy: the seed creates the
+admin again.
+
 ## Key routes
 
 | Route | Purpose |

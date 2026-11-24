@@ -26,8 +26,11 @@ Live URL / hosting: Vercel production (`akhalsrecipes.com` per the owner; README
   prerendered `/` and `/recipes/<slug>` pages refresh (guard: `src/app/api/admin/revalidation.test.ts`)
 - `src/lib/validation.ts` — zod schemas for recipe create (`recipeInputSchema`, applies defaults) and update
   (`recipeUpdateSchema`, default-free partial — see Testing)
-- `prisma/seed.ts` — runs on EVERY Vercel build against production (upserts seed recipes, resets the admin
-  password hash from env)
+- `prisma/seed.ts` — runs on EVERY Vercel build against production. Its rules live in `prisma/seed-core.ts`
+  (guard: `prisma/seed-core.test.ts`): refresh spices from code; insert the starter recipes only into an
+  empty recipe table; create the admin from `ADMIN_EMAIL`/`ADMIN_PASSWORD` only when no ADMIN user exists
+  (never updates a user or password hash); retire placeholder slugs only for rows created before
+  2026-07-09. Changing `ADMIN_PASSWORD` in Vercel no longer changes the live password — see README.
 - Full architecture guide (outside this repo): `C:\Users\user\projects\project-guides\akhals-recipes.md`
 
 ## Commands
@@ -66,7 +69,7 @@ errors) → `npx next build` → `git diff` review. No CI.
 - Env (names only): `DATABASE_URL`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `NEXT_PUBLIC_SITE_URL`, NextAuth's
   `NEXTAUTH_SECRET`/`NEXTAUTH_URL` (read by next-auth), `VERCEL_ENV`.
 - `vercel-build` = `prisma generate && prisma db push && tsx prisma/seed.ts && next build` — every deploy
-  writes to the production DB.
+  writes to the production DB (schema push + the idempotent seed above).
 
 ## Conventions
 - Conventional commits; git identity is the GitHub noreply address.
