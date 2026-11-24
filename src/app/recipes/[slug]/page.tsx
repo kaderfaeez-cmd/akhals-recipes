@@ -10,6 +10,7 @@ import { CookingMode } from "@/components/recipes/CookingMode";
 import { ShareActions } from "@/components/recipes/ShareActions";
 import { ScanTracker } from "@/components/recipes/ScanTracker";
 import { getRecipe, getRelatedRecipes, getAllRecipes } from "@/lib/recipes";
+import { serializeJsonLd } from "@/lib/json-ld";
 
 export async function generateStaticParams() {
   const recipes = await getAllRecipes();
@@ -83,7 +84,7 @@ export default async function RecipePage({
       <ScanTracker recipeSlug={recipe.slug} spiceSlug={recipe.spiceSlug} />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(recipeSchema) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(recipeSchema) }}
       />
       <main id="main" className="bg-cream">
         {/* Hero */}
