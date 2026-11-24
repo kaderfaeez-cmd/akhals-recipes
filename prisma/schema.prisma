@@ -106,3 +106,15 @@ model RateLimitBucket {
 
   @@index([resetAt])
 }
+
+// Admin-uploaded images (WebP variants made by sharp), stored in Postgres because Vercel has no
+// durable local disk. Served publicly by src/app/media/[name]/route.ts at /media/<name>.
+model MediaAsset {
+  id          String   @id @default(cuid())
+  name        String   @unique // <safe-base>-<stamp>-<width>.webp
+  contentType String
+  width       Int
+  size        Int
+  bytes       Bytes
+  createdAt   DateTime @default(now())
+}

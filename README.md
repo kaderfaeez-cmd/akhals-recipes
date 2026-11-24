@@ -89,8 +89,11 @@ Point each packet's QR at
   `/recipes`, every `/recipes/<slug>` page and the sitemap refresh on the next
   visit instead of waiting for a redeploy.
 
-## Production upload note
+## Media uploads
 
-`/api/admin/upload` writes to `public/uploads` — fine on a VPS; on Vercel the
-filesystem is ephemeral, so swap in Vercel Blob or S3 before relying on the
-media library in production.
+`/api/admin/upload` checks the type and size, decodes the image with sharp and
+stores WebP copies (480 / 960 / 1600 px) in the `MediaAsset` table in Postgres,
+because Vercel has no durable local disk. They are served publicly from
+`/media/<name>.webp` (`src/app/media/[name]/route.ts`) with long-lived cache
+headers. On Vercel, request bodies over 4.5 MB are rejected before the handler
+runs, so keep uploads under that.

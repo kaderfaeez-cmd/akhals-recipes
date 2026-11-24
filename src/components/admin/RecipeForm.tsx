@@ -227,7 +227,7 @@ export function RecipeForm({ initial }: { initial: RecipeFormValues }) {
             <input
               className="w-full rounded-sm border border-(--line) bg-white/60 px-3.5 py-2.5 text-sm text-ink focus:border-cinnamon"
               value={values.heroImage}
-              placeholder="/uploads/… or /img/recipes/…"
+              placeholder="/media/… or /img/recipes/…"
               onChange={(e) => set("heroImage", e.target.value)}
               required
             />

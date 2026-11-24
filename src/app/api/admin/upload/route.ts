@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminSession } from "@/lib/admin-session";
-import path from "node:path";
-import { mkdir, writeFile } from "node:fs/promises";
-import sharp from "sharp";
+import sharp, { type Metadata } from "sharp";
+import { hasDatabase, prisma } from "@/lib/prisma";
+import { mediaUrl } from "@/lib/media";
 
 export const runtime = "nodejs";
 
@@ -10,13 +10,20 @@ const MAX_BYTES = 12 * 1024 * 1024;
 const WIDTHS = [480, 960, 1600];
 
 /**
- * Media library upload: compresses to WebP and emits responsive sizes.
- * NOTE: writes to local disk (public/uploads). On Vercel the filesystem is
- * ephemeral — swap the write for Vercel Blob / S3 when hosting there.
+ * Media library upload: decodes the image with sharp (anything that isn't a real image fails
+ * here), re-encodes it to WebP at 480 / 960 / 1600 px without enlarging, and stores each size in
+ * the MediaAsset table. Vercel has no durable local disk, so the bytes live in Postgres and are
+ * served publicly by src/app/media/[name]/route.ts.
+ *
+ * Note: Vercel rejects request bodies over 4.5 MB before this handler runs, so in production the
+ * effective limit is lower than MAX_BYTES.
  */
 export async function POST(req: NextRequest) {
   const denied = await requireAdminSession();
   if (denied) return denied;
+  if (!hasDatabase()) {
+    return NextResponse.json({ ok: false, error: "Database not configured. Set DATABASE_URL." }, { status: 503 });
+  }
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");
   if (!file || !(file instanceof File)) {
@@ -37,30 +44,39 @@ export async function POST(req: NextRequest) {
     .replace(/^-+|-+$/g, "")
     .slice(0, 60) || "image";
   const stamp = Date.now().toString(36);
-  const dir = path.join(process.cwd(), "public", "uploads");
-  await mkdir(dir, { recursive: true });
 
+  let meta: Metadata;
+  const encoded: { name: string; width: number; bytes: Uint8Array<ArrayBuffer> }[] = [];
   try {
-    const image = sharp(buffer).rotate();
-    const meta = await image.metadata();
-    const variants: { width: number; url: string }[] = [];
-
+    meta = await sharp(buffer).rotate().metadata();
     for (const width of WIDTHS) {
-      if (meta.width && meta.width < width && variants.length > 0) break;
-      const name = `${base}-${stamp}-${width}.webp`;
-      const out = await sharp(buffer).rotate().resize({ width, withoutEnlargement: true }).webp({ quality: 82 }).toBuffer();
-      await writeFile(path.join(dir, name), out);
-      variants.push({ width, url: `/uploads/${name}` });
+      if (meta.width && meta.width < width && encoded.length > 0) break;
+      const webp = await sharp(buffer).rotate().resize({ width, withoutEnlargement: true }).webp({ quality: 82 }).toBuffer();
+      // Copy into a plain ArrayBuffer-backed array, the type Prisma expects for a Bytes column.
+      const bytes = new Uint8Array(webp);
+      encoded.push({ name: `${base}-${stamp}-${width}.webp`, width, bytes });
     }
-
-    return NextResponse.json({
-      ok: true,
-      url: variants[variants.length - 1]?.url,
-      variants,
-      original: { width: meta.width, height: meta.height },
-    });
   } catch (err) {
-    console.error("[admin/upload]", err);
+    console.error("[admin/upload] processing failed", err);
     return NextResponse.json({ ok: false, error: "Image processing failed" }, { status: 500 });
   }
+
+  try {
+    for (const { name, width, bytes } of encoded) {
+      await prisma.mediaAsset.create({
+        data: { name, width, contentType: "image/webp", size: bytes.length, bytes },
+      });
+    }
+  } catch (err) {
+    console.error("[admin/upload] storing failed", err);
+    return NextResponse.json({ ok: false, error: "Could not save the image" }, { status: 500 });
+  }
+
+  const variants = encoded.map(({ name, width }) => ({ width, url: mediaUrl(name) }));
+  return NextResponse.json({
+    ok: true,
+    url: variants[variants.length - 1]?.url,
+    variants,
+    original: { width: meta.width, height: meta.height },
+  });
 }

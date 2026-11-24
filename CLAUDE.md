@@ -12,8 +12,9 @@ Live URL / hosting: Vercel production (`akhalsrecipes.com` per the owner; README
 - Next.js 16.2.10 App Router, React 19.2, TypeScript strict, Tailwind 4, R3F/Three.js + GSAP hero
 - npm (lockfile committed). Install: `npm install`
 - Database / ORM: Neon Postgres via Prisma 6.19 (`prisma/schema.prisma`); no migrations — `prisma db push`
-- File storage: admin uploads write to local disk (`src/app/api/admin/upload/route.ts`) — does NOT work on
-  Vercel's ephemeral filesystem (known gap)
+- File storage: admin uploads are stored as WebP bytes in Postgres (`MediaAsset`, written by
+  `src/app/api/admin/upload/route.ts`) and served publicly at `/media/<name>` (`src/app/media/[name]/route.ts`).
+  Vercel caps request bodies at 4.5 MB.
 - Auth: NextAuth 4 credentials provider, JWT sessions, bcryptjs (`src/lib/auth.ts`)
 - External services: Cloudflare Web Analytics beacon (production only)
 
