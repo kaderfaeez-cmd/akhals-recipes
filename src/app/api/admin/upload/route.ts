@@ -8,6 +8,14 @@ export const runtime = "nodejs";
 
 const MAX_BYTES = 12 * 1024 * 1024;
 const WIDTHS = [480, 960, 1600];
+// Decoded size cap (sharp's default is ~268 MP, enough to exhaust a serverless function's memory).
+const MAX_PIXELS = 40_000_000;
+
+/** What sharp says the bytes really are. AVIF reports as HEIF with AV1 compression. */
+function isAllowedFormat(meta: Metadata): boolean {
+  if (meta.format === "jpeg" || meta.format === "png" || meta.format === "webp") return true;
+  return meta.format === "heif" && meta.compression === "av1";
+}
 
 /**
  * Media library upload: decodes the image with sharp (anything that isn't a real image fails
@@ -46,12 +54,29 @@ export async function POST(req: NextRequest) {
   const stamp = Date.now().toString(36);
 
   let meta: Metadata;
+  try {
+    meta = await sharp(buffer).metadata();
+  } catch (err) {
+    console.error("[admin/upload] unreadable image", err);
+    return NextResponse.json({ ok: false, error: "Image processing failed" }, { status: 500 });
+  }
+  // The declared MIME type is client-supplied; check what the bytes really are before decoding.
+  if (!isAllowedFormat(meta)) {
+    return NextResponse.json({ ok: false, error: "Unsupported image type" }, { status: 415 });
+  }
+  if ((meta.width ?? 0) * (meta.height ?? 0) > MAX_PIXELS) {
+    return NextResponse.json({ ok: false, error: "Image dimensions too large (max 40 megapixels)" }, { status: 413 });
+  }
+
   const encoded: { name: string; width: number; bytes: Uint8Array<ArrayBuffer> }[] = [];
   try {
-    meta = await sharp(buffer).rotate().metadata();
     for (const width of WIDTHS) {
       if (meta.width && meta.width < width && encoded.length > 0) break;
-      const webp = await sharp(buffer).rotate().resize({ width, withoutEnlargement: true }).webp({ quality: 82 }).toBuffer();
+      const webp = await sharp(buffer, { limitInputPixels: MAX_PIXELS })
+        .rotate()
+        .resize({ width, withoutEnlargement: true })
+        .webp({ quality: 82 })
+        .toBuffer();
       // Copy into a plain ArrayBuffer-backed array, the type Prisma expects for a Bytes column.
       const bytes = new Uint8Array(webp);
       encoded.push({ name: `${base}-${stamp}-${width}.webp`, width, bytes });
@@ -62,11 +87,12 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    for (const { name, width, bytes } of encoded) {
-      await prisma.mediaAsset.create({
-        data: { name, width, contentType: "image/webp", size: bytes.length, bytes },
-      });
-    }
+    // All sizes or none, so a failure part-way leaves no orphan rows.
+    await prisma.$transaction(
+      encoded.map(({ name, width, bytes }) =>
+        prisma.mediaAsset.create({ data: { name, width, contentType: "image/webp", size: bytes.length, bytes } })
+      )
+    );
   } catch (err) {
     console.error("[admin/upload] storing failed", err);
     return NextResponse.json({ ok: false, error: "Could not save the image" }, { status: 500 });

@@ -97,7 +97,28 @@ export async function checkRateLimit(
  */
 export function clientIp(header: (name: string) => string | null | undefined): string {
   const forwarded = header("x-forwarded-for")?.split(",")[0]?.trim();
-  return forwarded || header("x-real-ip")?.trim() || "unknown";
+  const ip = forwarded || header("x-real-ip")?.trim();
+  return ip ? normalizeIp(ip) : "unknown";
+}
+
+/**
+ * IPv4 stays as is (IPv4-mapped IPv6 is unwrapped). IPv6 is reduced to its /64 network: one
+ * subscriber usually controls a whole /64, so per-address limits would be trivial to rotate past.
+ */
+function normalizeIp(ip: string): string {
+  const mapped = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i.exec(ip);
+  if (mapped) return mapped[1];
+  if (!ip.includes(":")) return ip;
+
+  const halves = ip.toLowerCase().split("::");
+  if (halves.length > 2) return ip.toLowerCase();
+  const head = halves[0] ? halves[0].split(":") : [];
+  const tail = halves.length === 2 && halves[1] ? halves[1].split(":") : [];
+  const missing = 8 - head.length - tail.length;
+  if (missing < 0 || (halves.length === 1 && missing !== 0)) return ip.toLowerCase();
+  const groups = [...head, ...Array<string>(missing).fill("0"), ...tail];
+  if (!groups.every((g) => /^[0-9a-f]{1,4}$/.test(g))) return ip.toLowerCase();
+  return `${groups.slice(0, 4).map((g) => parseInt(g, 16).toString(16)).join(":")}::/64`;
 }
 
 export function rateLimitKey(purpose: string, ip: string): string {

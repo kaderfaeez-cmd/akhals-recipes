@@ -39,6 +39,13 @@ describe("client identity", () => {
     expect(clientIp(headers({}))).toBe("unknown");
   });
 
+  test("IPv6 clients are grouped by their /64 network, which one subscriber controls", () => {
+    expect(clientIp(headers({ "x-forwarded-for": "2001:db8:abcd:12:1111:2222:3333:4444" }))).toBe("2001:db8:abcd:12::/64");
+    expect(clientIp(headers({ "x-forwarded-for": "2001:db8:abcd:12::9" }))).toBe("2001:db8:abcd:12::/64");
+    expect(clientIp(headers({ "x-forwarded-for": "2001:db8::1" }))).toBe("2001:db8:0:0::/64");
+    expect(clientIp(headers({ "x-forwarded-for": "::ffff:203.0.113.7" }))).toBe("203.0.113.7");
+  });
+
   test("keys are stable per purpose and IP and never contain the IP", () => {
     const key = rateLimitKey("login", "203.0.113.7");
     expect(key).toBe(rateLimitKey("login", "203.0.113.7"));
